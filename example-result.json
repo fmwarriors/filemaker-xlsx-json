@@ -1,0 +1,38 @@
+{
+  "errorCode": 0,
+  "message": "",
+  "data": {
+    "valoresComoTexto": true,
+    "fechasComoSerialExcel": true,
+    "hojas": [
+      {
+        "nombre": "Productos",
+        "columnas": {
+          "A": "Código",
+          "B": "Descripción",
+          "C": "Cantidad"
+        },
+        "filas": [
+          {
+            "numero": 2,
+            "valores": {
+              "A": "001",
+              "B": "Producto ficticio",
+              "C": "12"
+            },
+            "tipos": {
+              "A": "s",
+              "B": "s",
+              "C": "n"
+            },
+            "estilos": {
+              "A": 0,
+              "B": 0,
+              "C": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
