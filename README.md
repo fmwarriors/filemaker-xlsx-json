@@ -1,6 +1,6 @@
 # FileMaker XLSX → JSON
 
-Lee el contenido de un archivo Excel `.xlsx` desde FileMaker Pro y devuelve un JSON con sus hojas, encabezados, filas y celdas.
+Un sólo script lee el contenido de un archivo Excel `.xlsx` desde FileMaker Pro y devuelve un JSON con sus hojas, encabezados, filas y celdas.
 
 Utiliza el plugin **BaseElements**. No necesita Microsoft Excel instalado, tablas auxiliares ni campos contenedores. No crea ni modifica registros.
 
