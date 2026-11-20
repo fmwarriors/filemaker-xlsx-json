@@ -1,0 +1,1417 @@
+{
+  "op": "create:script",
+  "name": "UTL_LeerExcelJSON_sp",
+  "folder": "ADT_scripts",
+  "hidden": false,
+  "runWithFullAccess": false,
+  "body": [
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "▼ ========================================================================== ▼"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "   Propósito:      Seleccionar y leer un XLSX como JSON sin crear ni modificar registros."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "   Llamado desde:  Menú Guiones o un guion que recoge Get ( ScriptResult ). Área UTL: utilidades."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "   Entorno:        FileMaker Pro 19.5+ Mac/Windows y BaseElements; cualquier presentación."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "   Parámetros (JSON): Opcional {ruta: texto}; ruta nativa absoluta. Sin ruta abre selector."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "   Devuelve:       {errorCode,message,data:{hojas:[{nombre,columnas,filas}]}} y $$_EXCEL.RESULTADO_JSON."
+    },
+    {
+      "stepID": 89,
+      "step": "#"
+    },
+    {
+      "stepID": 89,
+      "step": "#"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "UTL_LeerExcelJSON_sp: sin parámetro abre selector. Parámetro JSON opcional: {ruta: ruta absoluta nativa al XLSX}."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Resultado: {errorCode:0,message:vacio,data:{hojas:[{nombre,columnas:{A:encabezado},filas:[{numero,valores:{A:texto},tipos:{A:tipoOpenXML},estilos:{A:indice},formulas:{A:formula}}]}]}}."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Primera fila con contenido de cada hoja = cabecera. Claves de columna A,B,...; faltantes se omiten; valores almacenados como texto; fechas numéricas sin convertir; fórmulas sin recalcular, se usa caché. Hojas de gráficos se omiten."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Recoger Get ( ScriptResult ) inmediatamente tras Perform Script. También reemplaza $$_EXCEL.RESULTADO_JSON al inicio/final, incluso ante cancelación (errorCode=1) o error; no usar datos si errorCode<>0."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "No crea/modifica registros ni cambia presentación. Descomprime en subcarpeta temporal UUID y la elimina al finalizar."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Las llamadas de BaseElements son Evaluate de código fijo, resuelto en el cliente. No requiere plugin en el CLI para almacenar el guion."
+    },
+    {
+      "stepID": 89,
+      "step": "#"
+    },
+    {
+      "stepID": 89,
+      "step": "#"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "▲ ========================================================================== ▲"
+    },
+    {
+      "stepID": 89,
+      "step": "#"
+    },
+    {
+      "stepID": 85,
+      "step": "Allow User Abort",
+      "on": false
+    },
+    {
+      "stepID": 86,
+      "step": "Set Error Capture",
+      "on": true
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Global inicializada y reemplazada aquí en cada ejecución, incluidos errores/cancelación. Solo memoria de la sesión."
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$$_EXCEL.RESULTADO_JSON",
+      "value": "\"\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_hojas",
+      "value": "\"[]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_temporal",
+      "value": "\"\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_parametro",
+      "value": "Get ( ScriptParameter )"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Las llamadas BE se evalúan como expresiones fijas para resolver el plugin en el cliente. No se concatena contenido del Excel como código."
+    },
+    {
+      "stepID": 71,
+      "step": "Loop",
+      "flush": "always"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "EvaluationError ( Evaluate ( \"BE_Version\" ) ) <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "113"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"BaseElements no está instalado o activado en este equipo.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "not IsEmpty ( $_parametro )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "Left ( JSONFormatElements ( $_parametro ) ; 1 ) <> \"{\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "1700"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"El parámetro debe ser un objeto JSON con ruta opcional.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_ruta",
+      "value": "JSONGetElement ( $_parametro ; \"ruta\" )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_ruta )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_ruta",
+      "value": "Evaluate ( \"BE_FileSelectDialog ( \\\"Seleccione un archivo Excel .xlsx\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_ruta ) or $_error = 1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Selección cancelada.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo seleccionar el archivo.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "Lower ( Right ( $_ruta ; 5 ) ) <> \".xlsx\" or ValueCount ( $_ruta ) <> 1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10001"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Seleccione un único archivo .xlsx sin contraseña. El formato .xls no es compatible.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_temporal",
+      "value": "ConvertFromFileMakerPath ( \"file:\" & Get ( TemporaryPath ) & \"FMExcel_\" & Get ( UUID ) & \"/\" ; Case ( Get ( SystemPlatform ) = -2 ; WinPath ; PosixPath ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_temporal ) or $_temporal = \"?\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_temporal",
+      "value": "\"\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10002"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo obtener la carpeta temporal del cliente.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_operacion",
+      "value": "Evaluate ( \"BE_FolderCreate ( $_temporal )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo crear la carpeta temporal.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "20/11/2026: leer el XLSX binario mediante BE_FileImport (ruta Unicode) antes de BE_Unzip. Evita la apertura estrecha UTF-8/ANSI de UnZipFile en Windows. No renombra ni modifica el archivo original."
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_archivoBinario",
+      "value": "Evaluate ( \"BE_FileImport ( $_ruta )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0 or IsEmpty ( $_archivoBinario )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Case ( $_error ; $_error ; 10012 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo leer el XLSX como archivo binario. Compruebe la ruta y los permisos.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_operacion",
+      "value": "Evaluate ( \"BE_Unzip ( $_archivoBinario ; $_temporal )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo descomprimir el XLSX. Compruebe que existe y no está cifrado.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_libro",
+      "value": "Evaluate ( \"BE_FileReadText ( $_temporal & \\\"xl/workbook.xml\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0 or IsEmpty ( $_libro )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Case ( $_error ; $_error ; 10003 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se encuentra un libro XLSX válido (xl/workbook.xml).\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_relaciones",
+      "value": "Evaluate ( \"BE_FileReadText ( $_temporal & \\\"xl/_rels/workbook.xml.rels\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0 or IsEmpty ( $_relaciones )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Case ( $_error ; $_error ; 10003 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pueden resolver las hojas del libro.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_textos",
+      "value": "\"\""
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "Evaluate ( \"BE_FileExists ( $_temporal & \\\"xl/sharedStrings.xml\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_textos",
+      "value": "Evaluate ( \"BE_FileReadText ( $_temporal & \\\"xl/sharedStrings.xml\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudieron leer los textos compartidos.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"count(/*[local-name()='workbook']/*[local-name()='sheets']/*[local-name()='sheet'])\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_numeroHojas",
+      "value": "Let ( [ bruto = Evaluate ( \"BE_XPath ( $_libro ; $_xpath )\" ) ; numero = JSONGetElement ( \"[\" & bruto & \"]\" ; 0 ) ; $_error = Case ( Left ( numero ; 1 ) = \"?\" or IsEmpty ( numero ) ; 10010 ; $_error ) ] ; Case ( $_error ; 0 ; numero ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( $_error ; $_error ; errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0 or GetAsNumber ( $_numeroHojas ) < 1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Case ( $_error ; $_error ; 10004 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"El libro no contiene hojas legibles.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_inicio",
+      "value": "Get ( CurrentTimeStamp )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceHoja",
+      "value": "1"
+    },
+    {
+      "stepID": 71,
+      "step": "Loop",
+      "flush": "always"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "Let ( $_error = Case ( Get ( CurrentTimeStamp ) - $_inicio > 30 ; 10011 ; $_error ) ; $_indiceHoja > $_numeroHojas or $_error <> 0 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseHoja",
+      "value": "\"/*[local-name()='workbook']/*[local-name()='sheets']/*[local-name()='sheet'][\" & $_indiceHoja & \"]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseHoja & \"/@name)\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_nombreHoja",
+      "value": "Evaluate ( \"BE_XPath ( $_libro ; $_xpath )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseHoja & \"/@*[local-name()='id'])\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_idHoja",
+      "value": "Evaluate ( \"BE_XPath ( $_libro ; $_xpath )\" )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_idHoja ) or Filter ( $_idHoja ; \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-\" ) <> $_idHoja"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10005"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Identificador de hoja no compatible.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseRelacion",
+      "value": "\"/*[local-name()='Relationships']/*[local-name()='Relationship'][@Id='\" & $_idHoja & \"']\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseRelacion & \"/@Type)\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_tipoHoja",
+      "value": "Evaluate ( \"BE_XPath ( $_relaciones ; $_xpath )\" )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "Right ( $_tipoHoja ; 10 ) = \"/worksheet\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseRelacion & \"/@Target)\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_destino",
+      "value": "Evaluate ( \"BE_XPath ( $_relaciones ; $_xpath )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseRelacion & \"/@TargetMode)\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_modo",
+      "value": "Evaluate ( \"BE_XPath ( $_relaciones ; $_xpath )\" )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_destino ) or $_modo = \"External\" or PatternCount ( $_destino ; \"..\" ) or PatternCount ( $_destino ; \":\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10006"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Ruta de hoja externa o no compatible.\""
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_archivoHoja",
+      "value": "$_temporal & Case ( Left ( $_destino ; 1 ) = \"/\" ; Middle ( $_destino ; 2 ; Length ( $_destino ) ) ; \"xl/\" & $_destino )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlHoja",
+      "value": "Evaluate ( \"BE_FileReadText ( $_archivoHoja )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0 or IsEmpty ( $_xmlHoja )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Case ( $_error ; $_error ; 10007 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"No se pudo leer la hoja: \" & $_nombreHoja"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Primera fila con contenido = encabezados. Se omiten filas sin celdas con valor/fórmula. Claves A,B,... conservan columnas vacías o duplicadas."
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Normalizar solo la copia en memoria: los atributos de formato x14ac/xr de Excel heredan namespaces que BE_XPath no incluye al extraer una fila. Se conservan contenido y atributos de datos sin prefijo; no se altera el XLSX."
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xsltDatos",
+      "value": "\"<xsl:stylesheet version='1.0' xmlns:xsl='http://www.w3.org/1999/XSL/Transform'><xsl:output method='xml' encoding='UTF-8' omit-xml-declaration='yes'/><xsl:template match='*'><xsl:element name='{local-name()}'><xsl:apply-templates select='@*[namespace-uri() = &quot;&quot;] | node()'/></xsl:element></xsl:template><xsl:template match='@* | text()'><xsl:copy/></xsl:template><xsl:template match='comment() | processing-instruction()'/></xsl:stylesheet>\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlHoja",
+      "value": "Evaluate ( \"BE_XSLT_ApplyInMemory ( $_xmlHoja ; $_xsltDatos )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseFilas",
+      "value": "\"/*[local-name()='worksheet']/*[local-name()='sheetData']/*[local-name()='row'][*[local-name()='c']/*[local-name()='v' or local-name()='is' or local-name()='f']]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"count(\" & $_baseFilas & \")\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_numeroFilas",
+      "value": "Let ( [ bruto = Evaluate ( \"BE_XPath ( $_xmlHoja ; $_xpath )\" ) ; numero = JSONGetElement ( \"[\" & bruto & \"]\" ; 0 ) ; $_error = Case ( Left ( numero ; 1 ) = \"?\" or IsEmpty ( numero ) ; 10010 ; $_error ) ] ; Case ( $_error ; 0 ; numero ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( $_error ; $_error ; errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_columnas",
+      "value": "\"{}\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_filas",
+      "value": "\"[]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceFila",
+      "value": "1"
+    },
+    {
+      "stepID": 71,
+      "step": "Loop",
+      "flush": "always"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "Let ( $_error = Case ( Get ( CurrentTimeStamp ) - $_inicio > 30 ; 10011 ; $_error ) ; $_indiceFila > $_numeroFilas or $_error <> 0 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "$_baseFilas & \"[\" & $_indiceFila & \"]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlFila",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlHoja ; $_xpath ; \\\"\\\" ; 0 )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_numeroFila",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlFila ; \\\"string(/*/@r)\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_numeroCeldas",
+      "value": "Let ( [ bruto = Evaluate ( \"BE_XPath ( $_xmlFila ; \\\"count(/*/*[local-name()='c'])\\\" )\" ) ; numero = JSONGetElement ( \"[\" & bruto & \"]\" ; 0 ) ; $_error = Case ( Left ( numero ; 1 ) = \"?\" or IsEmpty ( numero ) ; 10010 ; $_error ) ] ; Case ( $_error ; 0 ; numero ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_fila",
+      "value": "JSONSetElement ( \"{}\" ; [ \"numero\" ; $_numeroFila ; JSONNumber ] ; [ \"valores\" ; \"{}\" ; JSONObject ] ; [ \"tipos\" ; \"{}\" ; JSONObject ] ; [ \"estilos\" ; \"{}\" ; JSONObject ] ; [ \"formulas\" ; \"{}\" ; JSONObject ] )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceCelda",
+      "value": "1"
+    },
+    {
+      "stepID": 71,
+      "step": "Loop",
+      "flush": "always"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "Let ( $_error = Case ( Get ( CurrentTimeStamp ) - $_inicio > 30 ; 10011 ; $_error ) ; $_indiceCelda > $_numeroCeldas or $_error <> 0 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"/*/*[local-name()='c'][\" & $_indiceCelda & \"]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlCelda",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlFila ; $_xpath ; \\\"\\\" ; 0 )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_referencia",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlCelda ; \\\"string(/*/@r)\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_columna",
+      "value": "Filter ( $_referencia ; \"ABCDEFGHIJKLMNOPQRSTUVWXYZ\" )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_columna )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10008"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Celda sin referencia de columna válida en \" & $_nombreHoja"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_tipo",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlCelda ; \\\"string(/*/@t)\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_estilo",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlCelda ; \\\"string(/*/@s)\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_formula",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlCelda ; \\\"string(/*/*[local-name()='f'])\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_valor",
+      "value": "Evaluate ( \"BE_XPath ( $_xmlCelda ; \\\"string(/*/*[local-name()='v'])\\\" )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_tipo = \"s\" or $_tipo = \"inlineStr\""
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_tipo = \"s\""
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( $_textos ) or IsEmpty ( $_valor ) or Filter ( $_valor ; \"0123456789\" ) <> $_valor"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10009"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Referencia de texto compartido inválida en \" & $_referencia"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlTexto",
+      "value": "$_textos"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseTexto",
+      "value": "\"/*[local-name()='sst']/*[local-name()='si'][\" & ( GetAsNumber ( $_valor ) + 1 ) & \"]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"count(\" & $_baseTexto & \")\""
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "Evaluate ( \"BE_XPath ( $_xmlTexto ; $_xpath )\" ) <> 1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "10009"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Texto compartido inexistente en \" & $_referencia"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 69,
+      "step": "Else"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xmlTexto",
+      "value": "$_xmlCelda"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseTexto",
+      "value": "\"/*/*[local-name()='is']\""
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_baseFragmentos",
+      "value": "\"(\" & $_baseTexto & \"/*[local-name()='t'] | \" & $_baseTexto & \"/*[local-name()='r']/*[local-name()='t'])\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"count(\" & $_baseFragmentos & \")\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_numeroFragmentos",
+      "value": "Let ( [ bruto = Evaluate ( \"BE_XPath ( $_xmlTexto ; $_xpath )\" ) ; numero = JSONGetElement ( \"[\" & bruto & \"]\" ; 0 ) ; $_error = Case ( Left ( numero ; 1 ) = \"?\" or IsEmpty ( numero ) ; 10010 ; $_error ) ] ; Case ( $_error ; 0 ; numero ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_valor",
+      "value": "\"\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceFragmento",
+      "value": "1"
+    },
+    {
+      "stepID": 71,
+      "step": "Loop",
+      "flush": "always"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "Let ( $_error = Case ( Get ( CurrentTimeStamp ) - $_inicio > 30 ; 10011 ; $_error ) ; $_indiceFragmento > $_numeroFragmentos or $_error <> 0 )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_xpath",
+      "value": "\"string(\" & $_baseFragmentos & \"[\" & $_indiceFragmento & \"])\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_valor",
+      "value": "$_valor & Evaluate ( \"BE_XPath ( $_xmlTexto ; $_xpath )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_error",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceFragmento",
+      "value": "$_indiceFragmento + 1"
+    },
+    {
+      "stepID": 73,
+      "step": "End Loop"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 89,
+      "step": "#",
+      "text": "Valores como texto: conserva precisión y ceros del texto. Fechas numéricas siguen como serial Excel; estilos y tipos originales acompañan. Fórmulas: caché guardada, sin recálculo."
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_indiceFila = 1"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_columnas",
+      "value": "JSONSetElement ( $_columnas ; $_columna ; $_valor ; JSONString )"
+    },
+    {
+      "stepID": 69,
+      "step": "Else"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "IsEmpty ( FilterValues ( JSONListKeys ( $_columnas ; \"\" ) ; $_columna ) )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_columnas",
+      "value": "JSONSetElement ( $_columnas ; $_columna ; \"\" ; JSONString )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_fila",
+      "value": "JSONSetElement ( $_fila ; [ \"valores.\" & $_columna ; $_valor ; JSONString ] ; [ \"tipos.\" & $_columna ; Case ( IsEmpty ( $_tipo ) ; \"n\" ; $_tipo ) ; JSONString ] ; [ \"estilos.\" & $_columna ; GetAsNumber ( $_estilo ) ; JSONNumber ] )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "not IsEmpty ( $_formula )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_fila",
+      "value": "JSONSetElement ( $_fila ; \"formulas.\" & $_columna ; $_formula ; JSONString )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceCelda",
+      "value": "$_indiceCelda + 1"
+    },
+    {
+      "stepID": 73,
+      "step": "End Loop"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_indiceFila > 1 and $_error = 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_filas",
+      "value": "JSONSetElement ( $_filas ; \"[\" & ( $_indiceFila - 2 ) & \"]\" ; $_fila ; JSONObject )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceFila",
+      "value": "$_indiceFila + 1"
+    },
+    {
+      "stepID": 73,
+      "step": "End Loop"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error = 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_hoja",
+      "value": "JSONSetElement ( \"{}\" ; [ \"nombre\" ; $_nombreHoja ; JSONString ] ; [ \"columnas\" ; $_columnas ; JSONObject ] ; [ \"filas\" ; $_filas ; JSONArray ] )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_hojas",
+      "value": "JSONSetElement ( $_hojas ; \"[\" & ValueCount ( JSONListKeys ( $_hojas ; \"\" ) ) & \"]\" ; $_hoja ; JSONObject )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_indiceHoja",
+      "value": "$_indiceHoja + 1"
+    },
+    {
+      "stepID": 73,
+      "step": "End Loop"
+    },
+    {
+      "stepID": 72,
+      "step": "Exit Loop If",
+      "condition": "1"
+    },
+    {
+      "stepID": 73,
+      "step": "End Loop"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "not IsEmpty ( $_temporal )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_limpieza",
+      "value": "Evaluate ( \"BE_FileDelete ( $_temporal )\" )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_errorLimpieza",
+      "value": "Let ( errorFM = Get ( LastError ) ; Case ( errorFM ; errorFM ; Evaluate ( \"BE_GetLastError\" ) ) )"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_errorLimpieza <> 0 and $_error = 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "\"Lectura completada. No se pudo borrar la carpeta temporal; se eliminará al cerrar FileMaker.\""
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 68,
+      "step": "If",
+      "condition": "$_error <> 0"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_hojas",
+      "value": "\"[]\""
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_mensaje",
+      "value": "Case ( $_error = 10011 ; \"El análisis superó 30 segundos. Use un Excel más pequeño.\" ; $_error = 10010 ; \"El XML no devolvió un contador numérico válido.\" ; IsEmpty ( $_mensaje ) ; \"Error al analizar el XML del Excel.\" ; $_mensaje )"
+    },
+    {
+      "stepID": 70,
+      "step": "End If"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$_resultado",
+      "value": "JSONSetElement ( \"{}\" ; [ \"errorCode\" ; $_error ; JSONNumber ] ; [ \"message\" ; $_mensaje ; JSONString ] ; [ \"data.hojas\" ; $_hojas ; JSONArray ] ; [ \"data.valoresComoTexto\" ; 1 ; JSONBoolean ] ; [ \"data.fechasComoSerialExcel\" ; 1 ; JSONBoolean ] )"
+    },
+    {
+      "stepID": 141,
+      "step": "Set Variable",
+      "name": "$$_EXCEL.RESULTADO_JSON",
+      "value": "$_resultado"
+    },
+    {
+      "stepID": 103,
+      "step": "Exit Script",
+      "result": "$_resultado"
+    }
+  ]
+}
